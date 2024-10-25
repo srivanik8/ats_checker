@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/webpack';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import './App.css';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/webpack';
 
 GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js`;
 
 const ATSChecker = () => {
   const [file, setFile] = useState(null);
-  const [jobDescription, setJobDescription] = useState('');
+  const [jobSkills, setJobSkills] = useState('');
   const [score, setScore] = useState(null);
   const [extractedInfo, setExtractedInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,45 +28,83 @@ const ATSChecker = () => {
   };
 
   const parseResume = (resumeText) => {
-    const skills = extractSkills(resumeText);
-    const experience = extractExperience(resumeText);
-    const education = extractEducation(resumeText);
-    return { skills, experience, education };
+    const sections = extractSections(resumeText);
+    return {
+      skills: sections.skills.split(/[,\n]/).map(s => s.trim()).filter(s => s.length > 0),
+      education: sections.education,
+      experience: sections.experience,
+      projects: sections.projects
+    };
   };
 
-  const extractSkills = (text) => {
-    const skillRegex = /(?:Skills|Skillset):?\s*([\s\S]*?)(?:Experience|Education|$)/i;
-    const match = text.match(skillRegex);
-    return match ? match[1].split(',').map(skill => skill.trim()) : [];
-  };
+  const extractSections = (text) => {
+    const sections = {
+      skills: '',
+      education: '',
+      experience: '',
+      projects: ''
+    };
 
-  const extractExperience = (text) => {
-    const experienceRegex = /(?:Experience|Work History):?\s*([\s\S]*?)(?:Education|$)/i;
-    const match = text.match(experienceRegex);
-    return match ? match[1].trim() : 'Not found';
-  };
+    const sectionMarkers = {
+      skills: /(?:SKILLS|Technical Skills|Core Competencies|TECHNICAL EXPERTISE)(?:\:|\s)/i,
+      education: /(?:EDUCATION|Academic Background|QUALIFICATIONS)(?:\:|\s)/i,
+      experience: /(?:EXPERIENCE|Work Experience|Professional Experience|Employment History)(?:\:|\s)/i,
+      projects: /(?:PROJECTS|Key Projects|Personal Projects)(?:\:|\s)/i
+    };
 
-  const extractEducation = (text) => {
-    const educationRegex = /(?:Education|Qualifications):?\s*([\s\S]*?)(?:Skills|Experience|$)/i;
-    const match = text.match(educationRegex);
-    return match ? match[1].trim() : 'Not found';
-  };
-
-  const calculateScore = (extractedSkills, jobDescription, experience, education) => {
-    let score = 0;
-
-    if (experience !== 'Not found') {
-      score += 10; // Add 10 points for having experience
+    const positions = [];
+    for (const [section, regex] of Object.entries(sectionMarkers)) {
+      const match = text.match(regex);
+      if (match) {
+        positions.push({
+          section,
+          index: match.index,
+          end: match.index + match[0].length
+        });
+      }
     }
-    if (education !== 'Not found') {
-      score += 10; // Add 10 points for having education
-    }
 
-    const jobSkills = jobDescription.split(',').map(skill => skill.trim());
-    const matchedSkills = extractedSkills.filter(skill => jobSkills.includes(skill));
-    score += matchedSkills.length * 5; // Add 5 points for each matching skill
+    positions.sort((a, b) => a.index - b.index);
 
-    return score; // Return the total score
+    positions.forEach((pos, idx) => {
+      const startIndex = pos.end;
+      const endIndex = idx < positions.length - 1 ? positions[idx + 1].index : text.length;
+      sections[pos.section] = text.slice(startIndex, endIndex).trim();
+    });
+
+    return sections;
+  };
+
+  const calculateScore = (resumeSkills, jobSkillsStr) => {
+    const requiredSkills = jobSkillsStr
+      .split(',')
+      .map(skill => skill.trim().toLowerCase())
+      .filter(skill => skill.length > 0);
+
+    if (requiredSkills.length === 0) return { score: 0, matchedSkills: [], unmatchedSkills: [] };
+
+    const matchedSkills = [];
+    const unmatchedSkills = [];
+
+    requiredSkills.forEach(reqSkill => {
+      const found = resumeSkills.some(skill => 
+        skill.toLowerCase().includes(reqSkill) ||
+        reqSkill.includes(skill.toLowerCase())
+      );
+      if (found) {
+        matchedSkills.push(reqSkill);
+      } else {
+        unmatchedSkills.push(reqSkill);
+      }
+    });
+
+    const score = Math.round((matchedSkills.length / requiredSkills.length) * 100);
+
+    return {
+      score,
+      matchedSkills,
+      unmatchedSkills
+    };
   };
 
   const handleFileChange = (event) => {
@@ -79,25 +116,30 @@ const ATSChecker = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!file || !jobDescription) return;
+    if (!file || !jobSkills) return;
 
     setIsLoading(true);
     try {
       const resumeText = await extractTextFromPdf(file);
-      const parsedInfo = parseResume(resumeText);
-      const score = calculateScore(parsedInfo.skills, jobDescription, parsedInfo.experience, parsedInfo.education);
-      setScore(score);
-      setExtractedInfo(parsedInfo);
+      const parsedResume = parseResume(resumeText);
+      const scoreResult = calculateScore(parsedResume.skills, jobSkills);
+      
+      setScore(scoreResult.score);
+      setExtractedInfo({
+        ...parsedResume,
+        matchedSkills: scoreResult.matchedSkills,
+        unmatchedSkills: scoreResult.unmatchedSkills
+      });
 
-      // Prepare data to send to the backend
+      // Prepare data for backend
       const formData = new FormData();
       formData.append('resume', file);
-      formData.append('skills', JSON.stringify(parsedInfo.skills));
-      formData.append('score', score);
-      formData.append('education', parsedInfo.education);
-      formData.append('experience', parsedInfo.experience);
+      formData.append('skills', JSON.stringify(parsedResume.skills));
+      formData.append('score', scoreResult.score);
+      formData.append('education', parsedResume.education);
+      formData.append('experience', parsedResume.experience);
+      formData.append('projects', parsedResume.projects);
 
-      // Send data to the backend
       const response = await fetch('http://localhost:5000/upload', {
         method: 'POST',
         body: formData,
@@ -106,10 +148,8 @@ const ATSChecker = () => {
       if (!response.ok) {
         throw new Error('Failed to upload resume');
       }
-
-      console.log('Resume uploaded successfully');
     } catch (error) {
-      console.error("Error extracting text from PDF:", error);
+      console.error("Error processing resume:", error);
     } finally {
       setIsLoading(false);
     }
@@ -157,7 +197,7 @@ const ATSChecker = () => {
           <div className="col-12 col-md-6">
             <div className="card mb-4">
               <div className="card-header">
-                <h5>Upload Resume & Job Description</h5>
+                <h5>Upload Resume & Required Skills</h5>
                 <p>Get your resume ATS score instantly</p>
               </div>
               <div className="card-body">
@@ -176,17 +216,17 @@ const ATSChecker = () => {
                     />
                   </div>
                   <div className="mb-3">
-                    <label htmlFor="jobDescription" className="form-label">
-                      Job Description (comma-separated skills)
+                    <label htmlFor="jobSkills" className="form-label">
+                      Required Skills (comma-separated)
                     </label>
-                    <textarea
-                      id="jobDescription"
-                      value={jobDescription}
-                      onChange={(e) => setJobDescription(e.target.value)}
-                      placeholder="Paste the job description here..."
-                      required
+                    <input
+                      id="jobSkills"
+                      type="text"
+                      value={jobSkills}
+                      onChange={(e) => setJobSkills(e.target.value)}
+                      placeholder="e.g., Python, JavaScript, React, SQL"
                       className="form-control"
-                      rows="5"
+                      required
                     />
                   </div>
                   <button type="submit" className="btn btn-primary w-100" disabled={isLoading}>
@@ -200,39 +240,57 @@ const ATSChecker = () => {
           <div className="col-12 col-md-6">
             <div className="card mb-4">
               <div className="card-header">
-                <h5>ATS Score</h5>
-                <p>See how well your resume matches the job description</p>
+                <h5>ATS Analysis Results</h5>
               </div>
               <div className="card-body">
                 {score !== null ? (
                   <div className="mb-3">
-                    <h6>ATS Score</h6>
-                    <div className="progress">
+                    <h6>Skills Match Score</h6>
+                    <div className="progress mb-3">
                       <div
-                        className="progress-bar"
+                        className={`progress-bar ${score >= 70 ? 'bg-success' : score >= 40 ? 'bg-warning' : 'bg-danger'}`}
                         role="progressbar"
                         style={{ width: `${score}%` }}
                         aria-valuenow={score}
                         aria-valuemin="0"
                         aria-valuemax="100"
                       >
-                        {score.toFixed(2)}%
+                        {score}%
                       </div>
                     </div>
+                    
                     {extractedInfo && (
-                      <div className="mt-3">
-                        <h6>Skills</h6>
-                        <p>{extractedInfo.skills.join(', ')}</p>
-                        <h6>Experience</h6>
-                        <p>{extractedInfo.experience || 'Not found'}</p>
-                        <h6>Education</h6>
-                        <p>{extractedInfo.education || 'Not found'}</p>
+                      <div className="mt-4">
+                        <div className="mb-3">
+                          <h6 className="text-success">Matched Skills ({extractedInfo.matchedSkills.length})</h6>
+                          <p>{extractedInfo.matchedSkills.join(', ') || 'No matching skills found'}</p>
+                        </div>
+                        
+                        <div className="mb-3">
+                          <h6 className="text-danger">Missing Skills ({extractedInfo.unmatchedSkills.length})</h6>
+                          <p>{extractedInfo.unmatchedSkills.join(', ') || 'No missing skills'}</p>
+                        </div>
+
+                        <div className="mb-3">
+                          <h6>All Resume Skills</h6>
+                          <p>{extractedInfo.skills.join(', ') || 'No skills found'}</p>
+                        </div>
+
+                        <div className="mb-3">
+                          <h6>Education</h6>
+                          <p>{extractedInfo.education || 'Not found'}</p>
+                        </div>
+
+                        <div className="mb-3">
+                          <h6>Experience</h6>
+                          <p>{extractedInfo.experience || 'Not found'}</p>
+                        </div>
                       </div>
                     )}
                   </div>
                 ) : (
                   <p className="text-center text-muted">
-                    Upload your resume and enter a job description to see your ATS score.
+                    Upload your resume and enter required skills to see your ATS score.
                   </p>
                 )}
               </div>
@@ -241,8 +299,8 @@ const ATSChecker = () => {
         </div>
       </div>
 
-      <div className="container mt-5" id="history">
-        <h1 className="text-center mb-4">Resume History</h1>
+      <div className="container mt-5 mb-5" id="history">
+        <h2 className="text-center mb-4">Resume History</h2>
         <div className="row">
           {resumes.map((resume, index) => (
             <div className="col-12 col-md-6 col-lg-4 mb-4" key={index}>
@@ -251,7 +309,7 @@ const ATSChecker = () => {
                   <h5>Resume {index + 1}</h5>
                 </div>
                 <div className="card-body">
-                  <h6>ATS Score: {resume.score}</h6>
+                  <h6>Skills Match Score: {resume.score}%</h6>
                   <h6>Skills:</h6>
                   <p>{resume.skills.join(', ')}</p>
                   <h6>Education:</h6>
