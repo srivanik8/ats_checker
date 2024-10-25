@@ -46,10 +46,10 @@ const ATSChecker = () => {
     };
 
     const sectionMarkers = {
-      skills: /(?:SKILLS|Technical Skills|Core Competencies|TECHNICAL EXPERTISE)(?:\:|\s)/i,
-      education: /(?:EDUCATION|Academic Background|QUALIFICATIONS)(?:\:|\s)/i,
-      experience: /(?:EXPERIENCE|Work Experience|Professional Experience|Employment History)(?:\:|\s)/i,
-      projects: /(?:PROJECTS|Key Projects|Personal Projects)(?:\:|\s)/i
+      skills: /(?:SKILLS|Technical Skills|Core Competencies|TECHNICAL EXPERTISE)(?:|\s)/i,
+      education: /(?:EDUCATION|Academic Background|QUALIFICATIONS)(?:|\s)/i,
+      experience: /(?:EXPERIENCE|Work Experience|Professional Experience|Employment History)(?:|\s)/i,
+      projects: /(?:PROJECTS|Key Projects|Personal Projects)(?:|\s)/i
     };
 
     const positions = [];
@@ -173,14 +173,14 @@ const ATSChecker = () => {
   }, []);
 
   return (
-    <div>
-      <nav className="navbar navbar-expand-lg navbar-light bg-light">
+    <div id="ats-checker" className="container mt-5">
+      <nav className="navbar navbar-expand-lg navbar-light mb-4">
         <div className="container-fluid">
-          <a className="navbar-brand mx-auto" href="#">ATS Checker</a>
+          <a className="navbar-brand" href="#">ATS Checker</a>
           <div className="collapse navbar-collapse justify-content-end">
             <ul className="navbar-nav">
               <li className="nav-item">
-                <a className="nav-link" href="#ats-checker">Resume Checker</a>
+                <a className="nav-link" href="#ats-scorer">ATS Scorer</a>
               </li>
               <li className="nav-item">
                 <a className="nav-link" href="#history">History</a>
@@ -190,117 +190,120 @@ const ATSChecker = () => {
         </div>
       </nav>
 
-      <div className="container mt-5" id="ats-checker">
-        <h1 className="text-center mb-4">ATS Resume Checker</h1>
-        
-        <div className="row">
-          <div className="col-12 col-md-6">
-            <div className="card mb-4">
-              <div className="card-header">
-                <h5>Upload Resume & Required Skills</h5>
-                <p>Get your resume ATS score instantly</p>
-              </div>
-              <div className="card-body">
-                <form onSubmit={handleSubmit} className="mb-3">
-                  <div className="mb-3">
-                    <label htmlFor="resume" className="form-label">
-                      Upload Resume (PDF file)
-                    </label>
-                    <input
-                      id="resume"
-                      type="file"
-                      accept=".pdf"
-                      onChange={handleFileChange}
-                      className="form-control"
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="jobSkills" className="form-label">
-                      Required Skills (comma-separated)
-                    </label>
-                    <input
-                      id="jobSkills"
-                      type="text"
-                      value={jobSkills}
-                      onChange={(e) => setJobSkills(e.target.value)}
-                      placeholder="e.g., Python, JavaScript, React, SQL"
-                      className="form-control"
-                      required
-                    />
-                  </div>
-                  <button type="submit" className="btn btn-primary w-100" disabled={isLoading}>
-                    {isLoading ? 'Processing...' : 'Check Resume'}
-                  </button>
-                </form>
-              </div>
+      <h1 className="text-center mb-4">ATS Resume Checker</h1>
+      
+      <div className="row">
+        <div className="col-12 col-md-6">
+          <div className="card mb-4" style={{ backgroundColor: '#fff399'}}>
+            <div className="card-header">
+              <h5>Upload Resume & Required Skills</h5>
+              <p>Get your resume ATS score instantly</p>
+            </div>
+            <div className="card-body" style={{ backgroundColor: '#fff399'}}>
+              <form onSubmit={handleSubmit} className="mb-3">
+                <div className="mb-3">
+                  <label htmlFor="resume" className="form-label">
+                    Upload Resume (PDF file)
+                  </label>
+                  <input
+                    id="resume"
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                    className="form-control"
+                    required
+                  />
+                </div>
+                <div className="mb-3">
+                  <label htmlFor="jobSkills" className="form-label">
+                    Job Description Skills (comma-separated)
+                  </label>
+                  <input
+                    id="jobSkills"
+                    type="text"
+                    value={jobSkills}
+                    onChange={(e) => setJobSkills(e.target.value)}
+                    placeholder="e.g., Python, JavaScript, React, SQL"
+                    className="form-control"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="btn btn-secondary"
+                  style={{ padding: '0.4em 1em', fontSize: '1em' }}
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Processing...' : 'Check Resume'}
+                </button>
+              </form>
             </div>
           </div>
+        </div>
 
-          <div className="col-12 col-md-6">
-            <div className="card mb-4">
-              <div className="card-header">
-                <h5>ATS Analysis Results</h5>
-              </div>
-              <div className="card-body">
-                {score !== null ? (
-                  <div className="mb-3">
-                    <h6>Skills Match Score</h6>
-                    <div className="progress mb-3">
-                      <div
-                        className={`progress-bar ${score >= 70 ? 'bg-success' : score >= 40 ? 'bg-warning' : 'bg-danger'}`}
-                        role="progressbar"
-                        style={{ width: `${score}%` }}
-                        aria-valuenow={score}
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                      >
-                        {score}%
+        <div className="col-12 col-md-6">
+          <div className="card mb-4" style={{ backgroundColor: '#fff399'}}>
+            <div className="card-header">
+              <h5>ATS Analysis Results</h5>
+            </div>
+            <div className="card-body" style={{ backgroundColor: '#fff399'}}>
+              {score !== null ? (
+                <div className="mb-3">
+                  <h6>Skills Match Score</h6>
+                  <div className="progress mb-3">
+                    <div
+                      className={`progress-bar ${score >= 70 ? 'bg-success' : score >= 40 ? 'bg-warning' : 'bg-danger'}`}
+                      role="progressbar"
+                      style={{ width: `${score}%` }}
+                      aria-valuenow={score}
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                    >
+                      {score}%
+                    </div>
+                  </div>
+                  
+                  {extractedInfo && (
+                    <div className="mt-4">
+                      <div className="mb-3">
+                        <h6 className="text-success">Matched Skills ({extractedInfo.matchedSkills.length})</h6>
+                        <p>{extractedInfo.matchedSkills.join(', ') || 'No matching skills found'}</p>
+                      </div>
+                      
+                      <div className="mb-3">
+                        <h6 className="text-danger">Missing Skills ({extractedInfo.unmatchedSkills.length})</h6>
+                        <p>{extractedInfo.unmatchedSkills.join(', ') || 'No missing skills'}</p>
+                      </div>
+
+                      <div className="mb-3">
+                        <h6>All Resume Skills</h6>
+                        <p>{extractedInfo.skills.join(', ') || 'No skills found'}</p>
+                      </div>
+
+                      <div className="mb-3">
+                        <h6>Education</h6>
+                        <p>{extractedInfo.education || 'Not found'}</p>
+                      </div>
+
+                      <div className="mb-3">
+                        <h6>Experience</h6>
+                        <p>{extractedInfo.experience || 'Not found'}</p>
                       </div>
                     </div>
-                    
-                    {extractedInfo && (
-                      <div className="mt-4">
-                        <div className="mb-3">
-                          <h6 className="text-success">Matched Skills ({extractedInfo.matchedSkills.length})</h6>
-                          <p>{extractedInfo.matchedSkills.join(', ') || 'No matching skills found'}</p>
-                        </div>
-                        
-                        <div className="mb-3">
-                          <h6 className="text-danger">Missing Skills ({extractedInfo.unmatchedSkills.length})</h6>
-                          <p>{extractedInfo.unmatchedSkills.join(', ') || 'No missing skills'}</p>
-                        </div>
-
-                        <div className="mb-3">
-                          <h6>All Resume Skills</h6>
-                          <p>{extractedInfo.skills.join(', ') || 'No skills found'}</p>
-                        </div>
-
-                        <div className="mb-3">
-                          <h6>Education</h6>
-                          <p>{extractedInfo.education || 'Not found'}</p>
-                        </div>
-
-                        <div className="mb-3">
-                          <h6>Experience</h6>
-                          <p>{extractedInfo.experience || 'Not found'}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-center text-muted">
-                    Upload your resume and enter required skills to see your ATS score.
-                  </p>
-                )}
-              </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-center text-muted">
+                  Upload your resume and enter Job Description to see your ATS score.
+                </p>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       <div className="container mt-5 mb-5" id="history">
-        <h2 className="text-center mb-4">Resume History</h2>
+        <h1 className="text-center mb-4">Resume History</h1>
         <div className="row">
           {resumes.map((resume, index) => (
             <div className="col-12 col-md-6 col-lg-4 mb-4" key={index}>

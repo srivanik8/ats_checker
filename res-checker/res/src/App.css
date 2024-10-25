@@ -1,8 +1,19 @@
+body {
+  margin: 0; 
+}
+
 #root {
+  width: 100%; 
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+}
+
+.container {
+  display: flex;
+  flex-direction: column; 
+  align-items: center;
 }
 
 .logo {
@@ -34,9 +45,23 @@
 }
 
 .card {
+  width: 100%; /* Full width on small screens */
+  max-width: 600px; /* Limit max width for larger screens */
+  margin: 1rem 0; /* margin for spacing */
   padding: 2em;
 }
 
 .read-the-docs {
   color: #888;
+}
+
+@media (min-width: 768px) {
+  .container {
+    flex-direction: row; /* Change to row on larger screens */
+    justify-content: space-between; /* Space out items */
+  }
+
+  .card {
+    margin: 1rem; /* margin for spacing */
+  }
 }
